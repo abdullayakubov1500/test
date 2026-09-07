@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n api,web -c blue,green \"node --env-file=.env server/server.mjs\" \"vite\"",
     "build": "tsc -b && vite build",
+    "start": "node --env-file=.env server/server.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.4",
     "typescript": "~6.0.2",
     "vite": "^6.4.3"
   }

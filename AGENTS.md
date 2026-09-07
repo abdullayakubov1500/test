@@ -6,9 +6,10 @@ React + TypeScript + Vite SPA — a chat widget with a mock AI assistant. UI is 
 
 ## Commands
 
-- `npm run dev` — Vite dev server with HMR
+- `npm run dev` — starts the API server (`server/server.mjs` on :8787) plus the Vite dev server (HMR); Vite proxies `/api` to the API server
 - `npm run build` — runs `tsc -b && vite build` (typecheck then bundle; must pass sequentially)
-- `npm run preview` — serves the built `dist/` locally
+- `npm run start` — standalone server: serves `dist/` + `/api/chat` (Node, `server/server.mjs`)
+- `npm run preview` — serves the built `dist/` locally (with `/api` proxied to the API server)
 
 ## Linting
 
@@ -38,4 +39,9 @@ public/             — favicon.svg, icons.svg
 
 - `dist/` is gitignored but currently present — do not depend on it being fresh
 - No test framework, no CI config, no formatter config
-- AI responses come from the **Gemini REST API** (`src/lib/gemini.ts`) using `VITE_GEMINI_API_KEY` from `.env` (see README). If the key is missing or the request fails, `useChat.ts` falls back to hardcoded mock responses; a min typing delay of ~700ms keeps the typing indicator visible
+- All AI responses are generated **server-side**: the Gemini key never reaches the client
+  - `server/gemini.mjs` — calls the Gemini REST API using `GEMINI_API_KEY` / `GEMINI_MODEL` from the server env (`.env` locally, Vercel env vars in production); contains the agent system prompt
+  - `server/chatHandler.mjs` — request validation + shared `handleChat()` used by both the local server and the Vercel function
+  - `server/server.mjs` — Node HTTP server for local dev / `npm start`; serves `dist/` and `POST /api/chat`
+  - `api/chat.ts` — Vercel serverless function (same behavior as the local endpoint)
+  - `src/lib/api.ts` — client posts message history to `/api/chat`; the chat hook falls back to hardcoded mock responses on any server failure (min typing delay ~700ms keeps the typing indicator visible)

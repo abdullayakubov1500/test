@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Message } from '../types';
-import { getAiResponse } from '../lib/gemini';
+import { getAiResponse } from '../lib/api';
 
 const FALLBACK_RESPONSES = [
   'Здравствуйте! Я ИИ-ассистент. Чем могу помочь?',
@@ -59,9 +59,7 @@ export function useChat() {
     try {
       reply = await getAiResponse([...messagesRef.current, userMessage]);
     } catch (error) {
-      if (error instanceof Error && !error.message.includes('not configured')) {
-        console.error('AI request failed:', error);
-      }
+      console.error('AI request failed, using fallback:', error);
       reply = getFallbackResponse();
     }
 

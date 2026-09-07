@@ -4,20 +4,25 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 ## Gemini setup
 
-The chat answers questions via the [Gemini REST API](https://ai.google.dev/). Configure the key in a local `.env` file:
+The chat answers questions via the [Gemini REST API](https://ai.google.dev/), but the request is made **server-side** so the API key never reaches the client.
+
+Local `.env`:
 
 ```
-VITE_GEMINI_API_KEY=
-VITE_GEMINI_MODEL=gemini-3.6-flash # optional override
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.6-flash # optional override
 ```
 
 Without the key the agent falls back to hardcoded mock responses, so `npm run dev` still works out of the box.
 
+On Vercel, set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`) in **Project → Settings → Environment Variables** — the `api/chat.ts` serverless function reads it from the server environment.
+
 ## Available scripts
 
-- `npm run dev` — Vite dev server with HMR
+- `npm run dev` — API server (`server/server.mjs`, :8787) + Vite dev server (HMR), `/api` proxied to the API server
 - `npm run build` — typecheck (`tsc -b`) then bundle
-- `npm run preview` — serve the built `dist/`
+- `npm run start` — standalone: serves `dist/` + `/api/chat` on one port (Node)
+- `npm run preview` — serve the built `dist/` locally (`/api` proxied to the API server)
 
 ## Current plugins
 
