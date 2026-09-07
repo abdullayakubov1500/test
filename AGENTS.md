@@ -38,4 +38,4 @@ public/             — favicon.svg, icons.svg
 
 - `dist/` is gitignored but currently present — do not depend on it being fresh
 - No test framework, no CI config, no formatter config
-- No backend — AI responses are faked client-side with a 500–1500ms random delay
+- AI responses come from the **Gemini REST API** (`src/lib/gemini.ts`) using `VITE_GEMINI_API_KEY` from `.env` (see README). If the key is missing or the request fails, `useChat.ts` falls back to hardcoded mock responses; a min typing delay of ~700ms keeps the typing indicator visible

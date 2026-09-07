@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Message } from '../types';
+import { getAiResponse } from '../lib/gemini';
 
-const AI_RESPONSES = [
+const FALLBACK_RESPONSES = [
   'Здравствуйте! Я ИИ-ассистент. Чем могу помочь?',
   'Отличный вопрос! Давайте разберёмся вместе.',
   'Спасибо за обращение! Подготовлю ответ.',
@@ -10,12 +11,14 @@ const AI_RESPONSES = [
   'Благодарю за вопрос! С удовольствием помогу.',
 ];
 
+const TYPING_MIN_DELAY = 700;
+
 function generateId(): string {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-function getRandomResponse(): string {
-  return AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+function getFallbackResponse(): string {
+  return FALLBACK_RESPONSES[Math.floor(Math.random() * FALLBACK_RESPONSES.length)];
 }
 
 export function useChat() {
@@ -23,9 +26,21 @@ export function useChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const messagesRef = useRef<Message[]>([]);
+  const aliveRef = useRef(true);
 
-  const sendMessage = useCallback((text: string) => {
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+
+  const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
 
@@ -38,25 +53,46 @@ export function useChat() {
     setMessages((prev) => [...prev, userMessage]);
     setIsTyping(true);
 
-    const typingTimer = setTimeout(() => {
-      const aiMessage: Message = {
-        id: generateId(),
-        text: getRandomResponse(),
-        sender: 'ai',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
-      setIsTyping(false);
-    }, Math.random() * 1000 + 500);
+    const startedAt = Date.now();
+    let reply: string;
 
-    timersRef.current.push(typingTimer);
-  }, []);
+    try {
+      reply = await getAiResponse([...messagesRef.current, userMessage]);
+    } catch (error) {
+      if (error instanceof Error && !error.message.includes('not configured')) {
+        console.error('AI request failed:', error);
+      }
+      reply = getFallbackResponse();
+    }
 
-  useEffect(() => {
-    return () => {
-      timersRef.current.forEach(clearTimeout);
+    const elapsed = Date.now() - startedAt;
+    const remaining = TYPING_MIN_DELAY - elapsed;
+    if (remaining > 0) {
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+    }
+
+    if (!aliveRef.current) return;
+
+    const aiMessage: Message = {
+      id: generateId(),
+      text: reply,
+      sender: 'ai',
+      timestamp: new Date(),
     };
+    setMessages((prev) => [...prev, aiMessage]);
+    setIsTyping(false);
   }, []);
 
-  return { messages, isOpen, isTyping, hasOpened, sendMessage, openChat: () => { setIsOpen(true); setHasOpened(true); }, closeChat: () => setIsOpen(false) };
+  return {
+    messages,
+    isOpen,
+    isTyping,
+    hasOpened,
+    sendMessage,
+    openChat: () => {
+      setIsOpen(true);
+      setHasOpened(true);
+    },
+    closeChat: () => setIsOpen(false),
+  };
 }
